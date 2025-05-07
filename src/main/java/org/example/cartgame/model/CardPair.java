@@ -7,21 +7,20 @@ import java.util.Objects;
 
 @Data
 @Builder
-public class Card {
+public class CardPair {
 
-    private String name;
-    private Suits suit;
+    private Card attackCard;
+    private Card defenseCard;
 
     @Override
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
-        Card card = (Card) o;
-        return Objects.equals(name, card.name) && suit == card.suit;
+        CardPair cardPair = (CardPair) o;
+        return Objects.equals(attackCard, cardPair.attackCard);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, suit);
+        return Objects.hashCode(attackCard);
     }
-
 }

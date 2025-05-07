@@ -3,6 +3,7 @@ package org.example.cartgame.web.response;
 import lombok.Builder;
 import lombok.Data;
 import org.example.cartgame.model.Card;
+import org.example.cartgame.model.Suits;
 
 import java.util.List;
 
@@ -10,6 +11,9 @@ import java.util.List;
 @Builder
 public class GameResponse {
 
-    private List<Card> cards;
+    private List<Card> playerOneCards;
+    private List<Card> playerTwoCards;
+    private Integer countCards;
+    private Suits trump;
 
 }

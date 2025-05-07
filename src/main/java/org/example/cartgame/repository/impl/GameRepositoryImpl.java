@@ -9,14 +9,15 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 @Repository
 public class GameRepositoryImpl implements GameRepository {
 
     private final List<Card> cards = new ArrayList<>();
+    private List<Card> playerOneCards = new ArrayList<>();
+    private List<Card> playerTwoCards = new ArrayList<>();
+    private final Suits trump;
 
     {
         try(
@@ -41,13 +42,52 @@ public class GameRepositoryImpl implements GameRepository {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
+        this.trump = Arrays.stream(Suits.values()).findAny().get();
     }
 
     @Override
-    public List<Card> getCardsByCount(Integer count) {
+    public Optional<Card> getCardFromDeck() {
+        if (this.cards.isEmpty()) {
+            return Optional.empty();
+        }
+        Card card = this.cards.get(0);
+        this.cards.remove(card);
+        return Optional.of(card);
+    }
+
+    @Override
+    public List<Card> getCards() {
+        return new ArrayList<>(this.cards);
+    }
+
+    @Override
+    public List<Card> getPlayedOneCards() {
+        return new ArrayList<>(this.playerOneCards);
+    }
+
+    @Override
+    public void setPlayedOneCards(List<Card> playedOneCards) {
+        this.playerOneCards = new ArrayList<>(playedOneCards);
+    }
+
+    @Override
+    public List<Card> getPlayedTwoCards() {
+        return new ArrayList<>(this.playerTwoCards);
+    }
+
+    @Override
+    public void setPlayedTwoCards(List<Card> playedTwoCards) {
+        this.playerTwoCards = new ArrayList<>(playedTwoCards);
+    }
+
+    @Override
+    public void shuffleCards() {
         Collections.shuffle(this.cards);
-        return this.cards.subList(0, count);
+    }
+
+    @Override
+    public Suits getTrump() {
+        return this.trump;
     }
 
 }

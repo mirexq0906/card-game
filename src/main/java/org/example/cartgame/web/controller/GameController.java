@@ -3,6 +3,8 @@ package org.example.cartgame.web.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.cartgame.service.GameService;
+import org.example.cartgame.web.dto.CardPairDto;
+import org.example.cartgame.web.response.CardPairResponse;
 import org.example.cartgame.web.response.GameResponse;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
@@ -15,14 +17,21 @@ public class GameController {
     private final GameService gameService;
 
     @MessageMapping("/start")
-    @SendTo("/topic/start")
+    @SendTo("/topic/player")
     public GameResponse start() {
-        GameResponse response = GameResponse.builder()
-                .cards(this.gameService.start())
-                .build();
+        return this.gameService.start();
+    }
 
-        System.out.println(response);
-        return response;
+    @MessageMapping("/attack")
+    @SendTo("/topic/table")
+    public CardPairResponse attack(CardPairDto cardPairDto) {
+        return this.gameService.attack(cardPairDto);
+    }
+
+    @MessageMapping("/defend")
+    @SendTo("/topic/table")
+    public CardPairResponse defend(CardPairDto cardPairDto) {
+        return this.gameService.defend(cardPairDto);
     }
 
 }
