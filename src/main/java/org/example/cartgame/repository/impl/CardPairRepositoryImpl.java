@@ -33,6 +33,7 @@ public class CardPairRepositoryImpl implements CardPairRepository {
 
     @Override
     public void setCardPair(CardPair pair) {
+        this.cardPairs.remove(pair);
         this.cardPairs.add(pair);
     }
 
