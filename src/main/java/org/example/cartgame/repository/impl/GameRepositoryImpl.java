@@ -1,6 +1,7 @@
 package org.example.cartgame.repository.impl;
 
 import org.example.cartgame.model.Card;
+import org.example.cartgame.model.Players;
 import org.example.cartgame.model.Suits;
 import org.example.cartgame.repository.GameRepository;
 import org.springframework.stereotype.Repository;
@@ -17,6 +18,7 @@ public class GameRepositoryImpl implements GameRepository {
     private final List<Card> cards = new ArrayList<>();
     private List<Card> playerOneCards = new ArrayList<>();
     private List<Card> playerTwoCards = new ArrayList<>();
+    private Players attacker = Players.PLAYER_ONE;
     private final Suits trump;
 
     {
@@ -28,7 +30,7 @@ public class GameRepositoryImpl implements GameRepository {
             while ((line = reader.readLine()) != null) {
                 String[] params = line.split("; ");
 
-                if (params.length != 2) {
+                if (params.length != 3) {
                     throw new RuntimeException("Failed to parse");
                 }
 
@@ -36,6 +38,7 @@ public class GameRepositoryImpl implements GameRepository {
                         Card.builder()
                                 .name(params[0])
                                 .suit(Suits.valueOf(params[1]))
+                                .rank(Integer.parseInt(params[2]))
                                 .build()
                 );
             }
@@ -58,6 +61,24 @@ public class GameRepositoryImpl implements GameRepository {
     @Override
     public List<Card> getCards() {
         return new ArrayList<>(this.cards);
+    }
+
+    @Override
+    public Optional<Card> getCardFromPlayer(Players player, Card card) {
+        switch (player) {
+            case PLAYER_ONE -> {
+                if (this.playerOneCards.remove(card)) {
+                    return Optional.of(card);
+                }
+            }
+            case PLAYER_TWO -> {
+                if (this.playerTwoCards.remove(card)) {
+                    return Optional.of(card);
+                }
+            }
+        }
+
+        return Optional.empty();
     }
 
     @Override
@@ -88,6 +109,16 @@ public class GameRepositoryImpl implements GameRepository {
     @Override
     public Suits getTrump() {
         return this.trump;
+    }
+
+    @Override
+    public Players getAttacker() {
+        return this.attacker;
+    }
+
+    @Override
+    public void setAttacker(Players attacker) {
+        this.attacker = attacker;
     }
 
 }

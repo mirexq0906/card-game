@@ -11,6 +11,7 @@ public class Card {
 
     private String name;
     private Suits suit;
+    private Integer rank;
 
     @Override
     public boolean equals(Object o) {

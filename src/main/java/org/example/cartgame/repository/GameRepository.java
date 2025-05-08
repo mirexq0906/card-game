@@ -1,6 +1,7 @@
 package org.example.cartgame.repository;
 
 import org.example.cartgame.model.Card;
+import org.example.cartgame.model.Players;
 import org.example.cartgame.model.Suits;
 
 import java.util.List;
@@ -11,6 +12,8 @@ public interface GameRepository {
     Optional<Card> getCardFromDeck();
 
     List<Card> getCards();
+
+    Optional<Card> getCardFromPlayer(Players player, Card card);
 
     List<Card> getPlayedOneCards();
 
@@ -23,5 +26,9 @@ public interface GameRepository {
     void shuffleCards();
 
     Suits getTrump();
+
+    Players getAttacker();
+
+    void setAttacker(Players attacker);
 
 }
