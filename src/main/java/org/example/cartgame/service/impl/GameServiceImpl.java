@@ -1,6 +1,7 @@
 package org.example.cartgame.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import org.example.cartgame.exception.GameException;
 import org.example.cartgame.model.Card;
 import org.example.cartgame.model.CardPair;
 import org.example.cartgame.model.Players;
@@ -34,8 +35,9 @@ public class GameServiceImpl implements GameService {
         this.gameRepository.setPlayedTwoCards(new ArrayList<>());
         this.gameRepository.setTrump(Arrays.stream(Suits.values()).findAny().get());
         this.gameRepository.setAttacker(Arrays.stream(Players.values()).findAny().get());
+        this.cardPairRepository.clearCardPairs();
         this.takeCards();
-        return this.getGameResponse();
+        return this.gameMapper.toGameResponse();
     }
 
     @Override
@@ -44,11 +46,11 @@ public class GameServiceImpl implements GameService {
         this.gameRepository.getCardFromPlayer(
                 this.gameRepository.getAttacker(),
                 cardPair.getAttackCard()
-        ).orElseThrow(() -> new RuntimeException("Card not found"));
+        ).orElseThrow(() -> new GameException("Карта не найдена. Атакует другой игрок"));
 
         this.cardPairRepository.setCardPair(cardPair);
 
-        return this.getGameResponse();
+        return this.gameMapper.toGameResponse();
     }
 
     @Override
@@ -56,17 +58,17 @@ public class GameServiceImpl implements GameService {
         CardPair cardPair = this.gameMapper.dtoToCardPair(cardPairDto);
 
         if (!this.canBeat(cardPair)) {
-            return this.getResponseWithMessage("Не удалось отбить этой картой");
+            throw new GameException("Не удалось отбить этой картой");
         }
 
         this.gameRepository.getCardFromPlayer(
                 this.gameRepository.getAttacker() == Players.PLAYER_ONE ? Players.PLAYER_TWO : Players.PLAYER_ONE,
                 cardPair.getDefenseCard()
-        ).orElseThrow(() -> new RuntimeException("Card not found"));
+        ).orElseThrow(() -> new GameException("Карта не найдена. Атакует другой игрок"));
 
         this.cardPairRepository.setCardPair(cardPair);
 
-        return this.getGameResponse();
+        return this.gameMapper.toGameResponse();
     }
 
     @Override
@@ -95,7 +97,7 @@ public class GameServiceImpl implements GameService {
 
         this.cardPairRepository.clearCardPairs();
         this.takeCards();
-        return this.getGameResponse();
+        return this.gameMapper.toGameResponse();
     }
 
     private boolean canBeat(CardPair cardPair) {
@@ -146,23 +148,6 @@ public class GameServiceImpl implements GameService {
 
         this.gameRepository.setPlayedOneCards(playedOneCards);
         this.gameRepository.setPlayedTwoCards(playedTwoCards);
-    }
-
-    private GameResponse getGameResponse() {
-        return GameResponse.builder()
-                .playerOneCards(this.gameRepository.getPlayedOneCards())
-                .playerTwoCards(this.gameRepository.getPlayedTwoCards())
-                .countCards(this.gameRepository.getCards().size())
-                .trump(this.gameRepository.getTrump())
-                .cardPairsOnTable(this.cardPairRepository.getAllCardPairs())
-                .attacker(this.gameRepository.getAttacker())
-                .build();
-    }
-
-    private GameResponse getResponseWithMessage(String message) {
-        GameResponse gameResponse = this.getGameResponse();
-        gameResponse.setMessage(message);
-        return gameResponse;
     }
 
 }

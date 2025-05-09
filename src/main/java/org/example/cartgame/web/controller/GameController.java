@@ -2,9 +2,12 @@ package org.example.cartgame.web.controller;
 
 
 import lombok.RequiredArgsConstructor;
+import org.example.cartgame.exception.GameException;
 import org.example.cartgame.service.GameService;
 import org.example.cartgame.web.dto.CardPairDto;
+import org.example.cartgame.web.mapper.GameMapper;
 import org.example.cartgame.web.response.GameResponse;
+import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
@@ -14,6 +17,7 @@ import org.springframework.stereotype.Controller;
 public class GameController {
 
     private final GameService gameService;
+    private final GameMapper gameMapper;
 
     @MessageMapping("/start")
     @SendTo("/topic/game")
@@ -37,6 +41,12 @@ public class GameController {
     @SendTo("/topic/game")
     public GameResponse endTurn() {
         return this.gameService.endTurn();
+    }
+
+    @MessageExceptionHandler
+    @SendTo("/topic/game")
+    public GameResponse handleException(GameException e) {
+        return this.gameMapper.toGameResponseWithMessage(e.getMessage());
     }
 
 }
