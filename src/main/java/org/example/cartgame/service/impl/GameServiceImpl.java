@@ -5,6 +5,7 @@ import org.example.cartgame.model.Card;
 import org.example.cartgame.model.CardPair;
 import org.example.cartgame.model.Players;
 import org.example.cartgame.model.Suits;
+import org.example.cartgame.parser.TxtFileParser;
 import org.example.cartgame.repository.CardPairRepository;
 import org.example.cartgame.repository.GameRepository;
 import org.example.cartgame.service.GameService;
@@ -13,8 +14,7 @@ import org.example.cartgame.web.mapper.GameMapper;
 import org.example.cartgame.web.response.GameResponse;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -23,10 +23,17 @@ public class GameServiceImpl implements GameService {
     private final GameRepository gameRepository;
     private final CardPairRepository cardPairRepository;
     private final GameMapper gameMapper;
+    private final TxtFileParser txtFileParser;
 
     @Override
     public GameResponse start() {
-        this.gameRepository.shuffleCards();
+        List<Card> cards = this.txtFileParser.parseCards("/assets/Cards.txt");
+        Collections.shuffle(cards);
+        this.gameRepository.setCards(cards);
+        this.gameRepository.setPlayedOneCards(new ArrayList<>());
+        this.gameRepository.setPlayedTwoCards(new ArrayList<>());
+        this.gameRepository.setTrump(Arrays.stream(Suits.values()).findAny().get());
+        this.gameRepository.setAttacker(Arrays.stream(Players.values()).findAny().get());
         this.takeCards();
         return this.getGameResponse();
     }

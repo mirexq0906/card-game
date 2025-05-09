@@ -13,19 +13,21 @@ public interface GameRepository {
 
     List<Card> getCards();
 
+    void setCards(List<Card> cards);
+
     Optional<Card> getCardFromPlayer(Players player, Card card);
 
-    List<Card> getPlayedOneCards();
-
     void setPlayedOneCards(List<Card> playedOneCards);
+
+    List<Card> getPlayedOneCards();
 
     void setPlayedTwoCards(List<Card> playedTwoCards);
 
     List<Card> getPlayedTwoCards();
 
-    void shuffleCards();
-
     Suits getTrump();
+
+    void setTrump(Suits trump);
 
     Players getAttacker();
 
