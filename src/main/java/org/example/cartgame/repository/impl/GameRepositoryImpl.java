@@ -57,7 +57,11 @@ public class GameRepositoryImpl implements GameRepository {
 
     @Override
     public Map<String, List<Card>> getPlayerCardsMap() {
-        return new HashMap<>(this.playerCardsMap);
+        Map<String, List<Card>> copyMap = new HashMap<>();
+        for (Map.Entry<String, List<Card>> entry : this.playerCardsMap.entrySet()) {
+            copyMap.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        return copyMap;
     }
 
     @Override

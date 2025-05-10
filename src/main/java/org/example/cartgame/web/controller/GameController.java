@@ -49,7 +49,7 @@ public class GameController {
 
     @MessageExceptionHandler
     public void handleException(GameException e) {
-        GameResponse gameResponse = this.gameMapper.toGameResponseWithMessage(e.getMessage(), e.getPlayerId());
+        GameResponse gameResponse = this.gameMapper.toGameResponseWithMessage(e.getPlayerId(), e.getMessage());
         this.simpMessagingTemplate.convertAndSend("/topic/game/" + e.getPlayerId(), gameResponse);
     }
 

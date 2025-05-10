@@ -12,7 +12,6 @@ import org.example.cartgame.service.GameService;
 import org.example.cartgame.web.dto.CardPairDto;
 import org.example.cartgame.web.dto.PlayerDto;
 import org.example.cartgame.web.mapper.GameMapper;
-import org.example.cartgame.web.response.GameResponse;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -28,13 +27,13 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public void start(PlayerDto startGameDto) {
-        Map<String, List<Card>> playerCardsMap = this.gameRepository.getPlayerCardsMap();
-
-        if (playerCardsMap.containsKey(startGameDto.getPlayerId())) {
+        if (this.getPlayersId().contains(startGameDto.getPlayerId())) {
             throw new GameException("Этот игрок уже подписался", startGameDto.getPlayerId());
         }
 
-        if (playerCardsMap.size() < 2) {
+        this.gameRepository.setPlayerCards(startGameDto.getPlayerId(), new ArrayList<>());
+
+        if (this.getPlayersId().size() < 2) {
             throw new GameException("Недостаточно игроков, чтобы начать игру", startGameDto.getPlayerId());
         }
 
