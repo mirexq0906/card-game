@@ -6,14 +6,14 @@ import org.example.cartgame.model.Suits;
 import org.example.cartgame.repository.GameRepository;
 import org.springframework.stereotype.Repository;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Repository
 public class GameRepositoryImpl implements GameRepository {
 
     private List<Card> cards = new ArrayList<>();
-    private List<Card> playerOneCards = new ArrayList<>();
-    private List<Card> playerTwoCards = new ArrayList<>();
-    private Players attacker;
+    private final Map<String, List<Card>> playerCardsMap = new HashMap<>();
+    private String attacker;
     private Suits trump;
 
     @Override
@@ -37,41 +37,37 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
-    public Optional<Card> getCardFromPlayer(Players player, Card card) {
-        switch (player) {
-            case PLAYER_ONE -> {
-                if (this.playerOneCards.remove(card)) {
-                    return Optional.of(card);
-                }
-            }
-            case PLAYER_TWO -> {
-                if (this.playerTwoCards.remove(card)) {
-                    return Optional.of(card);
-                }
-            }
+    public Optional<Card> getCardFromPlayer(String playerId, Card card) {
+        if (this.playerCardsMap.containsKey(playerId) && this.playerCardsMap.get(playerId).remove(card)) {
+            return Optional.of(card);
         }
 
         return Optional.empty();
     }
 
     @Override
-    public List<Card> getPlayedOneCards() {
-        return new ArrayList<>(this.playerOneCards);
+    public List<Card> getPlayerCards(String playerId) {
+        return new ArrayList<>(this.playerCardsMap.get(playerId));
     }
 
     @Override
-    public void setPlayedOneCards(List<Card> playedOneCards) {
-        this.playerOneCards = new ArrayList<>(playedOneCards);
+    public void setPlayerCards(String playerId, List<Card> playedOneCards) {
+        this.playerCardsMap.put(playerId, new ArrayList<>(playedOneCards));
     }
 
     @Override
-    public List<Card> getPlayedTwoCards() {
-        return new ArrayList<>(this.playerTwoCards);
+    public Map<String, List<Card>> getPlayerCardsMap() {
+        return new HashMap<>(this.playerCardsMap);
     }
 
     @Override
-    public void setPlayedTwoCards(List<Card> playedTwoCards) {
-        this.playerTwoCards = new ArrayList<>(playedTwoCards);
+    public List<String> getPlayersId() {
+        return new ArrayList<>(this.playerCardsMap.keySet());
+    }
+
+    @Override
+    public void clearPlayerCardsMap() {
+        this.playerCardsMap.clear();
     }
 
     @Override
@@ -85,12 +81,12 @@ public class GameRepositoryImpl implements GameRepository {
     }
 
     @Override
-    public Players getAttacker() {
+    public String getAttacker() {
         return this.attacker;
     }
 
     @Override
-    public void setAttacker(Players attacker) {
+    public void setAttacker(String attacker) {
         this.attacker = attacker;
     }
 

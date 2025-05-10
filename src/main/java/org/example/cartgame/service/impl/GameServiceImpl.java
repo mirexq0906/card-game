@@ -4,13 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.example.cartgame.exception.GameException;
 import org.example.cartgame.model.Card;
 import org.example.cartgame.model.CardPair;
-import org.example.cartgame.model.Players;
 import org.example.cartgame.model.Suits;
 import org.example.cartgame.parser.TxtFileParser;
 import org.example.cartgame.repository.CardPairRepository;
 import org.example.cartgame.repository.GameRepository;
 import org.example.cartgame.service.GameService;
 import org.example.cartgame.web.dto.CardPairDto;
+import org.example.cartgame.web.dto.PlayerDto;
 import org.example.cartgame.web.mapper.GameMapper;
 import org.example.cartgame.web.response.GameResponse;
 import org.springframework.stereotype.Service;
@@ -27,77 +27,99 @@ public class GameServiceImpl implements GameService {
     private final TxtFileParser txtFileParser;
 
     @Override
-    public GameResponse start() {
+    public void start(PlayerDto startGameDto) {
+        Map<String, List<Card>> playerCardsMap = this.gameRepository.getPlayerCardsMap();
+
+        if (playerCardsMap.containsKey(startGameDto.getPlayerId())) {
+            throw new GameException("Этот игрок уже подписался", startGameDto.getPlayerId());
+        }
+
+        if (playerCardsMap.size() < 2) {
+            throw new GameException("Недостаточно игроков, чтобы начать игру", startGameDto.getPlayerId());
+        }
+
         List<Card> cards = this.txtFileParser.parseCards("/assets/Cards.txt");
         Collections.shuffle(cards);
         this.gameRepository.setCards(cards);
-        this.gameRepository.setPlayedOneCards(new ArrayList<>());
-        this.gameRepository.setPlayedTwoCards(new ArrayList<>());
         this.gameRepository.setTrump(Arrays.stream(Suits.values()).findAny().get());
-        this.gameRepository.setAttacker(Arrays.stream(Players.values()).findAny().get());
+        this.gameRepository.setAttacker(this.gameRepository.getPlayerCardsMap().keySet().stream().findAny().get());
         this.cardPairRepository.clearCardPairs();
         this.takeCards();
-        return this.gameMapper.toGameResponse();
     }
 
     @Override
-    public GameResponse attack(CardPairDto cardPairDto) {
-        CardPair cardPair = this.gameMapper.dtoToCardPair(cardPairDto);
-        this.gameRepository.getCardFromPlayer(
-                this.gameRepository.getAttacker(),
-                cardPair.getAttackCard()
-        ).orElseThrow(() -> new GameException("Карта не найдена. Атакует другой игрок"));
-
-        this.cardPairRepository.setCardPair(cardPair);
-
-        return this.gameMapper.toGameResponse();
-    }
-
-    @Override
-    public GameResponse defend(CardPairDto cardPairDto) {
+    public void attack(CardPairDto cardPairDto) {
         CardPair cardPair = this.gameMapper.dtoToCardPair(cardPairDto);
 
-        if (!this.canBeat(cardPair)) {
-            throw new GameException("Не удалось отбить этой картой");
+        if (!this.gameRepository.getAttacker().equals(cardPairDto.getPlayerId())) {
+            throw new GameException("Атакует другой игрок", cardPairDto.getPlayerId());
         }
 
         this.gameRepository.getCardFromPlayer(
-                this.gameRepository.getAttacker() == Players.PLAYER_ONE ? Players.PLAYER_TWO : Players.PLAYER_ONE,
-                cardPair.getDefenseCard()
-        ).orElseThrow(() -> new GameException("Карта не найдена. Атакует другой игрок"));
+                cardPairDto.getPlayerId(),
+                cardPair.getAttackCard()
+        ).orElseThrow(() -> new GameException("Карта не найдена", cardPairDto.getPlayerId()));
 
         this.cardPairRepository.setCardPair(cardPair);
-
-        return this.gameMapper.toGameResponse();
     }
 
     @Override
-    public GameResponse endTurn() {
+    public void defend(CardPairDto cardPairDto) {
+        CardPair cardPair = this.gameMapper.dtoToCardPair(cardPairDto);
+
+        if (
+                !this.gameRepository.getPlayerCardsMap().containsKey(cardPairDto.getPlayerId()) ||
+                this.gameRepository.getAttacker().equals(cardPairDto.getPlayerId())
+        ) {
+            throw new GameException("Атакует другой игрок", cardPairDto.getPlayerId());
+        }
+
+        if (!this.canBeat(cardPair)) {
+            throw new GameException("Не удалось отбить этой картой", cardPairDto.getPlayerId());
+        }
+
+        this.gameRepository.getCardFromPlayer(
+                cardPairDto.getPlayerId(),
+                cardPair.getDefenseCard()
+        ).orElseThrow(() -> new GameException("Карта не найдена", cardPairDto.getPlayerId()));
+
+        this.cardPairRepository.setCardPair(cardPair);
+    }
+
+    @Override
+    public void endTurn(PlayerDto playerDto) {
+        if (
+                !this.gameRepository.getPlayerCardsMap().containsKey(playerDto.getPlayerId()) ||
+                        this.gameRepository.getAttacker().equals(playerDto.getPlayerId())
+        ) {
+            throw new GameException("Закончить ход может только защитник", playerDto.getPlayerId());
+        }
+
         List<CardPair> cardPairList = this.cardPairRepository.getAllCardPairs();
         for (CardPair cardPair : cardPairList) {
             if (cardPair.getDefenseCard() == null) {
-                switch (this.gameRepository.getAttacker()) {
-                    case PLAYER_ONE -> {
-                        this.takeCardFromTable(
-                                this.gameRepository.getPlayedTwoCards(),
-                                cardPairList,
-                                Players.PLAYER_TWO
-                        );
+                List<Card> playerCards = this.gameRepository.getPlayerCards(playerDto.getPlayerId());
+                for (CardPair cardPairSub : cardPairList) {
+                    if (cardPair.getDefenseCard() != null) {
+                        playerCards.add(cardPairSub.getDefenseCard());
                     }
-                    case PLAYER_TWO -> {
-                        this.takeCardFromTable(
-                                this.gameRepository.getPlayedOneCards(),
-                                cardPairList,
-                                Players.PLAYER_ONE
-                        );
+                    if (cardPair.getAttackCard() != null) {
+                        playerCards.add(cardPairSub.getAttackCard());
                     }
                 }
+                this.gameRepository.setPlayerCards(playerDto.getPlayerId(), playerCards);
+                break;
             }
         }
 
         this.cardPairRepository.clearCardPairs();
+        this.gameRepository.setAttacker(playerDto.getPlayerId());
         this.takeCards();
-        return this.gameMapper.toGameResponse();
+    }
+
+    @Override
+    public List<String> getPlayersId() {
+        return this.gameRepository.getPlayersId();
     }
 
     private boolean canBeat(CardPair cardPair) {
@@ -116,38 +138,20 @@ public class GameServiceImpl implements GameService {
         return false;
     }
 
-    private void takeCardFromTable(List<Card> playerCard, List<CardPair> cardPairList, Players player) {
-        for (CardPair cardPair : cardPairList) {
-            if (cardPair.getDefenseCard() != null) {
-                playerCard.add(cardPair.getDefenseCard());
-            }
-            if (cardPair.getAttackCard() != null) {
-                playerCard.add(cardPair.getAttackCard());
-            }
-        }
-
-        switch (player) {
-            case PLAYER_ONE -> this.gameRepository.setPlayedOneCards(playerCard);
-            case PLAYER_TWO -> this.gameRepository.setPlayedTwoCards(playerCard);
-        }
-    }
-
     private void takeCards() {
-        List<Card> playedOneCards = this.gameRepository.getPlayedOneCards();
-        List<Card> playedTwoCards = this.gameRepository.getPlayedTwoCards();
-        Optional<Card> card;
-        while (playedOneCards.size() < 6) {
-            card = this.gameRepository.getCardFromDeck();
-            card.ifPresent(playedOneCards::add);
-        }
+        Map<String, List<Card>> playerCardsMap = this.gameRepository.getPlayerCardsMap();
 
-        while (playedTwoCards.size() < 6) {
-            card = this.gameRepository.getCardFromDeck();
-            card.ifPresent(playedTwoCards::add);
-        }
+        for (Map.Entry<String, List<Card>> entry : playerCardsMap.entrySet()) {
+            String playerId = entry.getKey();
+            List<Card> playerCards = entry.getValue();
+            Optional<Card> card;
+            while (playerCards.size() < 6) {
+                card = this.gameRepository.getCardFromDeck();
+                card.ifPresent(playerCards::add);
+            }
 
-        this.gameRepository.setPlayedOneCards(playedOneCards);
-        this.gameRepository.setPlayedTwoCards(playedTwoCards);
+            this.gameRepository.setPlayerCards(playerId, playerCards);
+        }
     }
 
 }

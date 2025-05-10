@@ -5,6 +5,7 @@ import org.example.cartgame.model.Players;
 import org.example.cartgame.model.Suits;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface GameRepository {
@@ -15,22 +16,24 @@ public interface GameRepository {
 
     void setCards(List<Card> cards);
 
-    Optional<Card> getCardFromPlayer(Players player, Card card);
+    Optional<Card> getCardFromPlayer(String playerId, Card card);
 
-    void setPlayedOneCards(List<Card> playedOneCards);
+    List<Card> getPlayerCards(String playerId);
 
-    List<Card> getPlayedOneCards();
+    void setPlayerCards(String playerId, List<Card> playedOneCards);
 
-    void setPlayedTwoCards(List<Card> playedTwoCards);
+    Map<String, List<Card>> getPlayerCardsMap();
 
-    List<Card> getPlayedTwoCards();
+    List<String> getPlayersId();
+
+    void clearPlayerCardsMap();
 
     Suits getTrump();
 
     void setTrump(Suits trump);
 
-    Players getAttacker();
+    String getAttacker();
 
-    void setAttacker(Players attacker);
+    void setAttacker(String attacker);
 
 }

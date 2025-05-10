@@ -5,11 +5,13 @@ import lombok.RequiredArgsConstructor;
 import org.example.cartgame.exception.GameException;
 import org.example.cartgame.service.GameService;
 import org.example.cartgame.web.dto.CardPairDto;
+import org.example.cartgame.web.dto.PlayerDto;
 import org.example.cartgame.web.mapper.GameMapper;
 import org.example.cartgame.web.response.GameResponse;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 @Controller
@@ -18,35 +20,47 @@ public class GameController {
 
     private final GameService gameService;
     private final GameMapper gameMapper;
+    private final SimpMessagingTemplate simpMessagingTemplate;
 
     @MessageMapping("/start")
-    @SendTo("/topic/game")
-    public GameResponse start() {
-        return  this.gameService.start();
+    public void start(PlayerDto startGameDto) {
+        this.gameService.start(startGameDto);
+        this.sendMessage();
     }
 
     @MessageMapping("/attack")
     @SendTo("/topic/game")
-    public GameResponse attack(CardPairDto cardPairDto) {
-        return this.gameService.attack(cardPairDto);
+    public void attack(CardPairDto cardPairDto) {
+        this.gameService.attack(cardPairDto);
+        this.sendMessage();
     }
 
     @MessageMapping("/defend")
-    @SendTo("/topic/game")
-    public GameResponse defend(CardPairDto cardPairDto) {
-        return this.gameService.defend(cardPairDto);
+    public void defend(CardPairDto cardPairDto) {
+        this.gameService.defend(cardPairDto);
+        this.sendMessage();
     }
 
     @MessageMapping("/end-turn")
-    @SendTo("/topic/game")
-    public GameResponse endTurn() {
-        return this.gameService.endTurn();
+    public void endTurn(PlayerDto playerDto) {
+        this.gameService.endTurn(playerDto);
+        this.sendMessage();
     }
 
     @MessageExceptionHandler
-    @SendTo("/topic/game")
-    public GameResponse handleException(GameException e) {
-        return this.gameMapper.toGameResponseWithMessage(e.getMessage());
+    public void handleException(GameException e) {
+        GameResponse gameResponse = this.gameMapper.toGameResponseWithMessage(e.getMessage(), e.getPlayerId());
+        this.simpMessagingTemplate.convertAndSend("/topic/game/" + e.getPlayerId(), gameResponse);
+    }
+
+    private void sendMessage() {
+        for (String playerId : this.gameService.getPlayersId()) {
+            this.simpMessagingTemplate.convertAndSend(
+                    "/topic/game/" + playerId,
+                    this.gameMapper.toGameResponse(playerId)
+            );
+        }
+
     }
 
 }

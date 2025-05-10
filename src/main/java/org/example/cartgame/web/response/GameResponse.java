@@ -8,16 +8,16 @@ import org.example.cartgame.model.Players;
 import org.example.cartgame.model.Suits;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Builder
 public class GameResponse {
 
-    private List<Card> playerOneCards;
-    private List<Card> playerTwoCards;
+    private Map<String, List<Card>> playerCardsMap;
     private List<CardPair> cardPairsOnTable;
     private Integer countCards;
-    private Players attacker;
+    private String attacker;
     private Suits trump;
     private String message;
 
