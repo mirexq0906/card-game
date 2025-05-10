@@ -1,7 +1,6 @@
 package org.example.cartgame.repository;
 
 import org.example.cartgame.model.Card;
-import org.example.cartgame.model.Players;
 import org.example.cartgame.model.Suits;
 
 import java.util.List;

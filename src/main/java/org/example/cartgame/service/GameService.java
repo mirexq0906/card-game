@@ -16,6 +16,6 @@ public interface GameService {
 
     void endTurn(PlayerDto playerDto);
 
-    List<String> getPlayersId();
+    void finish(PlayerDto playerDto);
 
 }

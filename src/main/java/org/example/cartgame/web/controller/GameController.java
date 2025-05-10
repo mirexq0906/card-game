@@ -3,6 +3,8 @@ package org.example.cartgame.web.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.example.cartgame.exception.GameException;
+import org.example.cartgame.model.Player;
+import org.example.cartgame.repository.PlayerRepository;
 import org.example.cartgame.service.GameService;
 import org.example.cartgame.web.dto.CardPairDto;
 import org.example.cartgame.web.dto.PlayerDto;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Controller;
 public class GameController {
 
     private final GameService gameService;
+    private final PlayerRepository playerRepository;
     private final GameMapper gameMapper;
     private final SimpMessagingTemplate simpMessagingTemplate;
 
@@ -47,6 +50,12 @@ public class GameController {
         this.sendMessage();
     }
 
+    @MessageMapping("/finish")
+    public void finish(PlayerDto playerDto) {
+        this.gameService.finish(playerDto);
+        this.sendMessage();
+    }
+
     @MessageExceptionHandler
     public void handleException(GameException e) {
         GameResponse gameResponse = this.gameMapper.toGameResponseWithMessage(e.getPlayerId(), e.getMessage());
@@ -54,10 +63,10 @@ public class GameController {
     }
 
     private void sendMessage() {
-        for (String playerId : this.gameService.getPlayersId()) {
+        for (Player player : this.playerRepository.getPlayers()) {
             this.simpMessagingTemplate.convertAndSend(
-                    "/topic/game/" + playerId,
-                    this.gameMapper.toGameResponse(playerId)
+                    "/topic/game/" + player.getPlayerId(),
+                    this.gameMapper.toGameResponse(player.getPlayerId())
             );
         }
 

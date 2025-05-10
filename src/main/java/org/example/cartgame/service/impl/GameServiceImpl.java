@@ -4,10 +4,12 @@ import lombok.RequiredArgsConstructor;
 import org.example.cartgame.exception.GameException;
 import org.example.cartgame.model.Card;
 import org.example.cartgame.model.CardPair;
+import org.example.cartgame.model.Player;
 import org.example.cartgame.model.Suits;
 import org.example.cartgame.parser.TxtFileParser;
 import org.example.cartgame.repository.CardPairRepository;
 import org.example.cartgame.repository.GameRepository;
+import org.example.cartgame.repository.PlayerRepository;
 import org.example.cartgame.service.GameService;
 import org.example.cartgame.web.dto.CardPairDto;
 import org.example.cartgame.web.dto.PlayerDto;
@@ -22,18 +24,25 @@ public class GameServiceImpl implements GameService {
 
     private final GameRepository gameRepository;
     private final CardPairRepository cardPairRepository;
+    private final PlayerRepository playerRepository;
     private final GameMapper gameMapper;
     private final TxtFileParser txtFileParser;
 
     @Override
     public void start(PlayerDto startGameDto) {
-        if (this.getPlayersId().contains(startGameDto.getPlayerId())) {
+        if (this.playerRepository.isExistByPlayerId(startGameDto.getPlayerId())) {
             throw new GameException("Этот игрок уже подписался", startGameDto.getPlayerId());
         }
 
-        this.gameRepository.setPlayerCards(startGameDto.getPlayerId(), new ArrayList<>());
+        if (this.playerRepository.getPlayers().size() >= 2) {
+            throw new GameException("Достигнут лимит игроков", startGameDto.getPlayerId());
+        }
 
-        if (this.getPlayersId().size() < 2) {
+        Player player = Player.builder().playerId(startGameDto.getPlayerId()).build();
+        this.playerRepository.setPlayer(player);
+        this.gameRepository.setPlayerCards(player.getPlayerId(), new ArrayList<>());
+
+        if (this.playerRepository.getPlayers().size() < 2) {
             throw new GameException("Недостаточно игроков, чтобы начать игру", startGameDto.getPlayerId());
         }
 
@@ -41,17 +50,26 @@ public class GameServiceImpl implements GameService {
         Collections.shuffle(cards);
         this.gameRepository.setCards(cards);
         this.gameRepository.setTrump(Arrays.stream(Suits.values()).findAny().get());
-        this.gameRepository.setAttacker(this.gameRepository.getPlayerCardsMap().keySet().stream().findAny().get());
-        this.cardPairRepository.clearCardPairs();
+        this.gameRepository.setAttacker(this.playerRepository.getPlayers().stream().findAny().get().getPlayerId());
         this.takeCards();
     }
 
     @Override
     public void attack(CardPairDto cardPairDto) {
+        List<CardPair> cardPairList = this.cardPairRepository.getAllCardPairs();
+
+        if (cardPairList.size() >= 6) {
+            throw new GameException("Нельзя ложить больше 6 карт", cardPairDto.getPlayerId());
+        }
+
         CardPair cardPair = this.gameMapper.dtoToCardPair(cardPairDto);
 
         if (!this.gameRepository.getAttacker().equals(cardPairDto.getPlayerId())) {
             throw new GameException("Атакует другой игрок", cardPairDto.getPlayerId());
+        }
+
+        if (canAttack(cardPair, cardPairList)) {
+            throw new GameException("Нельзя атаковать этой картой", cardPairDto.getPlayerId());
         }
 
         this.gameRepository.getCardFromPlayer(
@@ -66,11 +84,8 @@ public class GameServiceImpl implements GameService {
     public void defend(CardPairDto cardPairDto) {
         CardPair cardPair = this.gameMapper.dtoToCardPair(cardPairDto);
 
-        if (
-                !this.gameRepository.getPlayerCardsMap().containsKey(cardPairDto.getPlayerId()) ||
-                this.gameRepository.getAttacker().equals(cardPairDto.getPlayerId())
-        ) {
-            throw new GameException("Атакует другой игрок", cardPairDto.getPlayerId());
+        if (this.gameRepository.getAttacker().equals(cardPairDto.getPlayerId())) {
+            throw new GameException("Этот игрок не может защищаться", cardPairDto.getPlayerId());
         }
 
         if (!this.canBeat(cardPair)) {
@@ -87,14 +102,19 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public void endTurn(PlayerDto playerDto) {
-        if (
-                !this.gameRepository.getPlayerCardsMap().containsKey(playerDto.getPlayerId()) ||
-                        this.gameRepository.getAttacker().equals(playerDto.getPlayerId())
-        ) {
-            throw new GameException("Закончить ход может только защитник", playerDto.getPlayerId());
+        Player currentPlayer = this.playerRepository.getPlayer(playerDto.getPlayerId())
+                .orElseThrow(() -> new GameException("Игрок не найден", playerDto.getPlayerId()));
+        currentPlayer.setEndTurn(true);
+        this.playerRepository.setPlayer(currentPlayer);
+
+        if (!this.canEndTurn()) {
+            throw new GameException("Ход может быть завершён только после подтверждения всех игроков", playerDto.getPlayerId());
         }
 
         List<CardPair> cardPairList = this.cardPairRepository.getAllCardPairs();
+        String attacker = this.gameRepository.getAttacker();
+        this.gameRepository.setAttacker(playerDto.getPlayerId());
+
         for (CardPair cardPair : cardPairList) {
             if (cardPair.getDefenseCard() == null) {
                 List<Card> playerCards = this.gameRepository.getPlayerCards(playerDto.getPlayerId());
@@ -107,18 +127,70 @@ public class GameServiceImpl implements GameService {
                     }
                 }
                 this.gameRepository.setPlayerCards(playerDto.getPlayerId(), playerCards);
+                this.gameRepository.setAttacker(attacker);
                 break;
             }
         }
 
+        for (Player player : this.playerRepository.getPlayers()) {
+            player.setEndTurn(false);
+            this.playerRepository.setPlayer(player);
+        }
+
         this.cardPairRepository.clearCardPairs();
-        this.gameRepository.setAttacker(playerDto.getPlayerId());
         this.takeCards();
     }
 
     @Override
-    public List<String> getPlayersId() {
-        return this.gameRepository.getPlayersId();
+    public void finish(PlayerDto playerDto) {
+        Player currentPlayer = this.playerRepository.getPlayer(playerDto.getPlayerId())
+                .orElseThrow(() -> new GameException("Игрок не найден", playerDto.getPlayerId()));
+        currentPlayer.setFinish(true);
+        this.playerRepository.setPlayer(currentPlayer);
+
+        if (!this.canFinish()) {
+            throw new GameException("Игра может быть завершена только после подтверждения всех игроков", playerDto.getPlayerId());
+        }
+
+        this.playerRepository.clearPlayers();
+        this.cardPairRepository.clearCardPairs();
+        this.gameRepository.clearPlayerCardsMap();
+    }
+
+    private boolean canFinish() {
+        for (Player player : this.playerRepository.getPlayers()) {
+            if (!player.isFinish()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean canEndTurn() {
+        for (Player player : this.playerRepository.getPlayers()) {
+            if (!player.isEndTurn()) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private boolean canAttack(CardPair cardPair, List<CardPair> cardPairList) {
+        Card attackCard = cardPair.getAttackCard();
+
+        for (CardPair cardPairSub : cardPairList) {
+            if (
+                    (cardPairSub.getAttackCard() != null && cardPairSub.getAttackCard().getName().equals(attackCard.getName())) ||
+                            (cardPairSub.getDefenseCard() != null && cardPairSub.getDefenseCard().getName().equals(attackCard.getName()))
+
+            ) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private boolean canBeat(CardPair cardPair) {

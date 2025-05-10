@@ -1,12 +1,12 @@
 package org.example.cartgame.repository.impl;
 
 import org.example.cartgame.model.Card;
-import org.example.cartgame.model.Players;
+import org.example.cartgame.model.Player;
 import org.example.cartgame.model.Suits;
 import org.example.cartgame.repository.GameRepository;
 import org.springframework.stereotype.Repository;
+
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Repository
 public class GameRepositoryImpl implements GameRepository {

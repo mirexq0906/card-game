@@ -5,6 +5,7 @@ import org.example.cartgame.model.Card;
 import org.example.cartgame.model.CardPair;
 import org.example.cartgame.repository.CardPairRepository;
 import org.example.cartgame.repository.GameRepository;
+import org.example.cartgame.repository.PlayerRepository;
 import org.example.cartgame.web.dto.CardPairDto;
 import org.example.cartgame.web.response.GameResponse;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ public class GameMapper {
 
     private final GameRepository gameRepository;
     private final CardPairRepository cardPairRepository;
+    private final PlayerRepository playerRepository;
 
     public CardPair dtoToCardPair(CardPairDto cardPairDto) {
         return CardPair.builder()
@@ -40,6 +42,7 @@ public class GameMapper {
                 .playerCardsMap(playerCardsMap)
                 .countCards(gameRepository.getCards().size())
                 .trump(gameRepository.getTrump())
+                .players(playerRepository.getPlayers())
                 .cardPairsOnTable(cardPairRepository.getAllCardPairs())
                 .attacker(gameRepository.getAttacker())
                 .build();
