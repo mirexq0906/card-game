@@ -49,7 +49,9 @@ public class GameServiceImpl implements GameService {
         List<Card> cards = this.txtFileParser.parseCards("/assets/Cards.txt");
         Collections.shuffle(cards);
         this.gameRepository.setCards(cards);
-        this.gameRepository.setTrump(Arrays.stream(Suits.values()).findAny().get());
+        Suits[] suits = Suits.values();
+        Suits trump = suits[new Random().nextInt(suits.length)];
+        this.gameRepository.setTrump(trump);
         this.gameRepository.setAttacker(this.playerRepository.getPlayers().stream().findAny().get().getPlayerId());
         this.takeCards();
     }
