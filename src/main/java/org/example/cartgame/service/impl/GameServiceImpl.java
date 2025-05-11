@@ -133,10 +133,10 @@ public class GameServiceImpl implements GameService {
             if (cardPair.getDefenseCard() == null) {
                 List<Card> playerCards = this.gameRepository.getPlayerCards(playerId);
                 for (CardPair cardPairSub : cardPairList) {
-                    if (cardPair.getDefenseCard() != null) {
+                    if (cardPairSub.getDefenseCard() != null) {
                         playerCards.add(cardPairSub.getDefenseCard());
                     }
-                    if (cardPair.getAttackCard() != null) {
+                    if (cardPairSub.getAttackCard() != null) {
                         playerCards.add(cardPairSub.getAttackCard());
                     }
                 }
