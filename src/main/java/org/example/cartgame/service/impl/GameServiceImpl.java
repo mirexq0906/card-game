@@ -114,12 +114,24 @@ public class GameServiceImpl implements GameService {
         }
 
         List<CardPair> cardPairList = this.cardPairRepository.getAllCardPairs();
+        String playerId;
         String attacker = this.gameRepository.getAttacker();
-        this.gameRepository.setAttacker(playerDto.getPlayerId());
+
+        if (attacker.equals(currentPlayer.getPlayerId())) {
+            playerId = this.playerRepository.getPlayers().stream()
+                    .filter(item -> !item.getPlayerId().equals(currentPlayer.getPlayerId()))
+                    .map(Player::getPlayerId)
+                    .findAny()
+                    .orElseThrow(() -> new GameException("Защитник не найден", currentPlayer.getPlayerId()));
+        } else {
+            playerId = currentPlayer.getPlayerId();
+        }
+
+        this.gameRepository.setAttacker(playerId);
 
         for (CardPair cardPair : cardPairList) {
             if (cardPair.getDefenseCard() == null) {
-                List<Card> playerCards = this.gameRepository.getPlayerCards(playerDto.getPlayerId());
+                List<Card> playerCards = this.gameRepository.getPlayerCards(playerId);
                 for (CardPair cardPairSub : cardPairList) {
                     if (cardPair.getDefenseCard() != null) {
                         playerCards.add(cardPairSub.getDefenseCard());
@@ -128,7 +140,7 @@ public class GameServiceImpl implements GameService {
                         playerCards.add(cardPairSub.getAttackCard());
                     }
                 }
-                this.gameRepository.setPlayerCards(playerDto.getPlayerId(), playerCards);
+                this.gameRepository.setPlayerCards(playerId, playerCards);
                 this.gameRepository.setAttacker(attacker);
                 break;
             }
