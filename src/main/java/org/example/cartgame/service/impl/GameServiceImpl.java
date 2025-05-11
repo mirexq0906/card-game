@@ -188,11 +188,11 @@ public class GameServiceImpl implements GameService {
                             (cardPairSub.getDefenseCard() != null && cardPairSub.getDefenseCard().getName().equals(attackCard.getName()))
 
             ) {
-                return true;
+                return false;
             }
         }
 
-        return false;
+        return true;
     }
 
     private boolean canBeat(CardPair cardPair) {
