@@ -70,7 +70,7 @@ public class GameServiceImpl implements GameService {
             throw new GameException("Атакует другой игрок", cardPairDto.getPlayerId());
         }
 
-        if (canAttack(cardPair, cardPairList)) {
+        if (!canAttack(cardPair, cardPairList)) {
             throw new GameException("Нельзя атаковать этой картой", cardPairDto.getPlayerId());
         }
 
@@ -182,17 +182,21 @@ public class GameServiceImpl implements GameService {
     private boolean canAttack(CardPair cardPair, List<CardPair> cardPairList) {
         Card attackCard = cardPair.getAttackCard();
 
+        if (cardPairList.isEmpty()) {
+            return true;
+        }
+
         for (CardPair cardPairSub : cardPairList) {
             if (
                     (cardPairSub.getAttackCard() != null && cardPairSub.getAttackCard().getName().equals(attackCard.getName())) ||
                             (cardPairSub.getDefenseCard() != null && cardPairSub.getDefenseCard().getName().equals(attackCard.getName()))
 
             ) {
-                return false;
+                return true;
             }
         }
 
-        return true;
+        return false;
     }
 
     private boolean canBeat(CardPair cardPair) {
